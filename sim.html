@@ -262,10 +262,11 @@
     <div class="hud-subtitle">3D Quantum Phase & Period-Finding Visualizer</div>
 
     <div class="section-label">1. Target Cryptosystem</div>
+     <button data-mode="dh">Diffie-Hellman</button>
     <div class="btn-group" id="mode-buttons">
-      <button class="active" data-mode="rsa">RSA</button>
-      <button data-mode="dh">Diffie-Hellman</button>
-      <button data-mode="ecc">ECC (Torus)</button>
+    <!--//  <button class="active" data-mode="rsa">RSA</button> -->
+     
+    <!-- <button data-mode="ecc">ECC (Torus)</button> -->
     </div>
 
     <div class="section-label">2. Quantum Circuit Stage</div>
@@ -351,7 +352,7 @@
     scene.add(gridHelper);
 
     // --- State Management ---
-    let currentMode = 'rsa'; // 'rsa' | 'dh' | 'ecc'
+    let currentMode = 'dh'; // 'rsa' | 'dh' | 'ecc'
     let currentStage = 0;    // 0: Superposition, 1: Oracle, 2: Collapse, 3: QFT
     const clock = new THREE.Clock();
 
