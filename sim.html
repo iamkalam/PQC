@@ -1,0 +1,787 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shor's Algorithm 3D Simulation — Breaking RSA, Diffie-Hellman & ECC</title>
+  <style>
+    :root {
+      --bg: #070b14;
+      --panel: rgba(13, 19, 34, 0.88);
+      --border: rgba(56, 189, 248, 0.25);
+      --accent: #38bdf8;
+      --accent-glow: rgba(56, 189, 248, 0.35);
+      --gold: #facc15;
+      --danger: #f43f5e;
+      --success: #10b981;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #canvas-container {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+    }
+
+    /* Left Control Panel */
+    .hud-left {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      width: 370px;
+      background: var(--panel);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      z-index: 10;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    }
+
+    .hud-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: #fff;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hud-subtitle {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    .section-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin: 14px 0 8px;
+      font-weight: 600;
+    }
+
+    .btn-group {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .stage-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    button {
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      color: var(--text);
+      padding: 9px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      text-align: left;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .btn-group button {
+      justify-content: center;
+      text-align: center;
+    }
+
+    button:hover {
+      border-color: var(--accent);
+      background: rgba(56, 189, 248, 0.12);
+    }
+
+    button.active {
+      background: rgba(56, 189, 248, 0.22);
+      border-color: var(--accent);
+      color: #fff;
+      box-shadow: 0 0 15px var(--accent-glow);
+    }
+
+    .stage-badge {
+      font-size: 0.68rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(15, 23, 42, 0.7);
+      color: var(--muted);
+    }
+
+    button.active .stage-badge {
+      background: var(--accent);
+      color: #000;
+      font-weight: 700;
+    }
+
+    /* Right Telemetry Panel */
+    .hud-right {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 390px;
+      background: var(--panel);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      z-index: 10;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    }
+
+    .math-box {
+      background: rgba(7, 11, 20, 0.8);
+      border-left: 3px solid var(--accent);
+      padding: 12px;
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 0.8rem;
+      line-height: 1.5;
+      color: #bae6fd;
+      margin: 10px 0;
+    }
+
+    .status-banner {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      background: rgba(16, 185, 129, 0.12);
+      color: #34d399;
+    }
+
+    .status-banner.cracked {
+      border-color: rgba(244, 63, 94, 0.5);
+      background: rgba(244, 63, 94, 0.18);
+      color: #fda4af;
+      animation: pulse 1.8s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.4); }
+      50% { box-shadow: 0 0 18px 4px rgba(244, 63, 94, 0.25); }
+    }
+
+    .desc-text {
+      font-size: 0.83rem;
+      line-height: 1.55;
+      color: #cbd5e1;
+      margin-top: 8px;
+    }
+
+    .legend {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(148, 163, 184, 0.15);
+      display: flex;
+      gap: 12px;
+      font-size: 0.74rem;
+      color: var(--muted);
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .controls-hint {
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      color: var(--muted);
+      z-index: 10;
+      pointer-events: none;
+    }
+  </style>
+
+  <!-- Three.js & OrbitControls via CDN -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+
+  <div id="canvas-container"></div>
+
+  <!-- Left HUD: Controls -->
+  <div class="hud-left">
+    <div class="hud-title">⚛️ Shor's Quantum Simulator</div>
+    <div class="hud-subtitle">3D Quantum Phase & Period-Finding Visualizer</div>
+
+    <div class="section-label">1. Target Cryptosystem</div>
+    <div class="btn-group" id="mode-buttons">
+      <button class="active" data-mode="rsa">RSA</button>
+      <button data-mode="dh">Diffie-Hellman</button>
+      <button data-mode="ecc">ECC (Torus)</button>
+    </div>
+
+    <div class="section-label">2. Quantum Circuit Stage</div>
+    <div class="stage-group" id="stage-buttons">
+      <button class="active" data-stage="0">
+        <span>1. Hadamard Superposition</span>
+        <span class="stage-badge">H⊗ⁿ</span>
+      </button>
+      <button data-stage="1">
+        <span>2. Modular / Curve Oracle</span>
+        <span class="stage-badge">U_f</span>
+      </button>
+      <button data-stage="2">
+        <span>3. Register Collapse</span>
+        <span class="stage-badge">Measure</span>
+      </button>
+      <button data-stage="3">
+        <span>4. Quantum Fourier Transform</span>
+        <span class="stage-badge">QFT†</span>
+      </button>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item"><span class="dot" style="background:#38bdf8"></span> Superposition State</div>
+      <div class="legend-item"><span class="dot" style="background:#facc15"></span> Periodic Coset / Subgroup</div>
+      <div class="legend-item"><span class="dot" style="background:#f43f5e"></span> QFT Period / Key Spike</div>
+    </div>
+  </div>
+
+  <!-- Right HUD: Math & Cryptanalysis Readout -->
+  <div class="hud-right">
+    <div class="hud-title" id="readout-title">RSA Integer Factorization</div>
+    <div class="math-box" id="readout-math"></div>
+    <div class="desc-text" id="readout-desc"></div>
+    <div class="status-banner" id="readout-status">
+      <span id="status-label">🔒 KEY STATUS: ENCRYPTED</span>
+      <span id="status-value">r = ?</span>
+    </div>
+  </div>
+
+  <div class="controls-hint">
+    🖱️ Left-Click + Drag: Rotate Camera &nbsp;|&nbsp; Right-Click + Drag: Pan &nbsp;|&nbsp; Scroll: Zoom
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // --- Scene, Camera, Renderer Setup ---
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x070b14, 0.015);
+
+    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(22, 18, 26);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    container.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.maxDistance = 70;
+    controls.minDistance = 8;
+
+    // --- Lighting ---
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    scene.add(ambientLight);
+
+    const dirLight1 = new THREE.DirectionalLight(0x38bdf8, 2.2);
+    dirLight1.position.set(20, 30, 15);
+    scene.add(dirLight1);
+
+    const dirLight2 = new THREE.DirectionalLight(0xf43f5e, 1.4);
+    dirLight2.position.set(-20, -15, -10);
+    scene.add(dirLight2);
+
+    // Subtle Reference Grid
+    const gridHelper = new THREE.GridHelper(36, 36, 0x1e293b, 0x0f172a);
+    gridHelper.position.y = -4;
+    scene.add(gridHelper);
+
+    // --- State Management ---
+    let currentMode = 'rsa'; // 'rsa' | 'dh' | 'ecc'
+    let currentStage = 0;    // 0: Superposition, 1: Oracle, 2: Collapse, 3: QFT
+    const clock = new THREE.Clock();
+
+    // --- Mathematical Helper Functions ---
+    function modPow(base, exp, mod) {
+      let res = 1;
+      base = base % mod;
+      while (exp > 0) {
+        if (exp % 2 === 1) res = (res * base) % mod;
+        exp = Math.floor(exp / 2);
+        base = (base * base) % mod;
+      }
+      return res;
+    }
+
+    // --- 3D Object Groups ---
+    const rsaGroup = new THREE.Group();
+    const dhGroup = new THREE.Group();
+    const eccGroup = new THREE.Group();
+    scene.add(rsaGroup, dhGroup, eccGroup);
+
+    // =====================================================
+    // 1. BUILD RSA VISUALIZATION (64 Quantum Register States)
+    // N = 15, a = 7 -> 7^x mod 15 cycles: 1, 7, 4, 13 (Period r = 4)
+    // =====================================================
+    const rsaBars = [];
+    const RSA_COUNT = 64;
+    const barGeo = new THREE.CylinderGeometry(0.22, 0.22, 1, 16);
+    barGeo.translate(0, 0.5, 0); // Pivot at bottom
+
+    for (let x = 0; x < RSA_COUNT; x++) {
+      const mat = new THREE.MeshStandardMaterial({
+        color: 0x38bdf8,
+        roughness: 0.25,
+        metalness: 0.6,
+        emissive: 0x000000
+      });
+      const mesh = new THREE.Mesh(barGeo, mat);
+
+      // Arrange in a spiral/wave or linear row with depth wave
+      const posX = (x - RSA_COUNT / 2) * 0.48;
+      const posZ = Math.sin(x * 0.2) * 2.0;
+      mesh.position.set(posX, -4, posZ);
+
+      const f_x = modPow(7, x, 15); // 1, 7, 4, 13
+      rsaGroup.add(mesh);
+      rsaBars.push({
+        mesh,
+        x,
+        f_x,
+        targetHeight: 1,
+        currentHeight: 1,
+        targetColor: new THREE.Color(0x38bdf8)
+      });
+    }
+
+    // =====================================================
+    // 2. BUILD DIFFIE-HELLMAN 2D LATTICE (12 x 12 Register)
+    // g = 2, p = 13, secret k = 5 -> y = 2^5 mod 13 = 6 (Order r = 12)
+    // Oracle: f(x1, x2) = g^x1 * y^(-x2) mod p = 2^(x1 - 5*x2) mod 13
+    // =====================================================
+    const dhNodes = [];
+    const DH_SIZE = 12;
+    const dhGeo = new THREE.BoxGeometry(0.65, 1, 0.65);
+    dhGeo.translate(0, 0.5, 0);
+
+    for (let x1 = 0; x1 < DH_SIZE; x1++) {
+      for (let x2 = 0; x2 < DH_SIZE; x2++) {
+        const mat = new THREE.MeshStandardMaterial({
+          color: 0x38bdf8,
+          roughness: 0.3,
+          metalness: 0.5
+        });
+        const mesh = new THREE.Mesh(dhGeo, mat);
+        const posX = (x1 - DH_SIZE / 2 + 0.5) * 1.4;
+        const posZ = (x2 - DH_SIZE / 2 + 0.5) * 1.4;
+        mesh.position.set(posX, -4, posZ);
+
+        // Exponent mod 12
+        const exp = ((x1 - 5 * x2) % 12 + 12) % 12;
+        const val = modPow(2, exp, 13);
+
+        // 2D QFT peak condition: w1 + 5*w2 ≡ 0 (mod 12)
+        const isQftPeak = ((x1 * 5 - x2) % 12 + 12) % 12 === 0;
+
+        dhGroup.add(mesh);
+        dhNodes.push({
+          mesh,
+          x1,
+          x2,
+          exp,
+          val,
+          isQftPeak,
+          targetHeight: 1,
+          currentHeight: 1,
+          targetColor: new THREE.Color(0x38bdf8)
+        });
+      }
+    }
+
+    // =====================================================
+    // 3. BUILD ECC TORUS VISUALIZATION (Finite Field Torus + QFT Plane)
+    // Elliptic Curve over F_p forms a periodic doubly-cyclic group (Torus)
+    // =====================================================
+    const torusRadius = 6.5;
+    const tubeRadius = 2.4;
+    const torusGeo = new THREE.TorusGeometry(torusRadius, tubeRadius, 28, 72);
+    const torusMat = new THREE.MeshBasicMaterial({
+      color: 0x1e293b,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.35
+    });
+    const torusMesh = new THREE.Mesh(torusGeo, torusMat);
+    torusMesh.rotation.x = Math.PI / 2;
+    eccGroup.add(torusMesh);
+
+    const eccNodes = [];
+    const ECC_STEPS = 14; // 14x14 register over (x1*G + x2*Q)
+    const secretD = 7;    // Q = 7G
+    const sphereGeo = new THREE.SphereGeometry(0.24, 16, 16);
+
+    for (let u = 0; u < ECC_STEPS; u++) {
+      for (let v = 0; v < ECC_STEPS; v++) {
+        const mat = new THREE.MeshStandardMaterial({
+          color: 0x38bdf8,
+          roughness: 0.2,
+          metalness: 0.7
+        });
+        const mesh = new THREE.Mesh(sphereGeo, mat);
+
+        // Torus coordinates for (u, v)
+        const theta = (u / ECC_STEPS) * Math.PI * 2;
+        const phi = (v / ECC_STEPS) * Math.PI * 2;
+
+        const tx = (torusRadius + tubeRadius * Math.cos(phi)) * Math.cos(theta);
+        const tz = (torusRadius + tubeRadius * Math.cos(phi)) * Math.sin(theta);
+        const ty = tubeRadius * Math.sin(phi);
+
+        // Scalar point addition index: (u + d*v) mod ECC_STEPS
+        const curveIndex = (u + secretD * v) % ECC_STEPS;
+        const isQftResonance = ((u * secretD - v) % ECC_STEPS + ECC_STEPS) % ECC_STEPS === 0;
+
+        mesh.position.set(tx, ty, tz);
+        eccGroup.add(mesh);
+
+        eccNodes.push({
+          mesh,
+          u,
+          v,
+          tx,
+          ty,
+          tz,
+          curveIndex,
+          isQftResonance,
+          targetPos: new THREE.Vector3(tx, ty, tz),
+          targetScale: 1,
+          targetColor: new THREE.Color(0x38bdf8)
+        });
+      }
+    }
+
+    // --- Narrative & Mathematical Readout Data ---
+    const READOUTS = {
+      rsa: {
+        title: "RSA Integer Factorization (N = 15)",
+        stages: [
+          {
+            math: "|ψ₁⟩ = (1/√64) ∑ |x⟩|0⟩   (x ∈ [0, 63])",
+            desc: "Stage 1: A Hadamard gate array puts all 64 input register states |x⟩ into an equal quantum superposition. Every column has identical amplitude.",
+            status: "🔒 KEY STATUS: SUPERPOSITION PREPARED",
+            val: "N = 15, a = 7",
+            cracked: false
+          },
+          {
+            math: "|ψ₂⟩ = (1/√64) ∑ |x⟩ |7ˣ mod 15⟩",
+            desc: "Stage 2: The Quantum Modular Exponentiation Oracle evaluates 7ˣ mod 15 across all x simultaneously. Notice the repeating 4-bar wave pattern: {1, 7, 4, 13, 1, 7, 4, 13...}.",
+            status: "⚡ ORACLE ACTIVE: PERIODIC WAVE ENCODED",
+            val: "Cycle: {1, 7, 4, 13}",
+            cracked: false
+          },
+          {
+            math: "|ψ₃⟩ = ∑ |x₀ + k·r⟩ |f₀⟩   (Measured f(x) = 4)",
+            desc: "Stage 3: Measuring the output register collapses the state into only inputs x where 7ˣ mod 15 = 4. The surviving gold pillars stand exactly r = 4 units apart!",
+            status: "🔍 ENTANGLEMENT COLLAPSE: COSET ISOLATED",
+            val: "Spacing r = 4",
+            cracked: false
+          },
+          {
+            math: "QFT(|ψ₃⟩) → Peaks at k·(64/4) = {0, 16, 32, 48}\ngcd(7^(4/2) ± 1, 15) = gcd(49 ± 1, 15) → p = 3, q = 5",
+            desc: "Stage 4: The Quantum Fourier Transform converts periodic spacing into frequency spikes at multiples of 16. Since 64/16 = 4, we extract r = 4 and immediately factor 15 = 3 × 5!",
+            status: "🔓 RSA BROKEN: PRIME FACTORS RECOVERED",
+            val: "p = 3, q = 5",
+            cracked: true
+          }
+        ]
+      },
+      dh: {
+        title: "Diffie-Hellman Discrete Log (p = 13, g = 2)",
+        stages: [
+          {
+            math: "|ψ₁⟩ = (1/12) ∑∑ |x₁, x₂⟩ |0⟩   (y = gᵏ mod 13 = 6)",
+            desc: "Stage 1: Shor's DLP algorithm initializes TWO quantum registers |x₁⟩ and |x₂⟩ into a uniform 2D superposition grid (12 × 12 states).",
+            status: "🔒 KEY STATUS: 2D REGISTER INITIALIZED",
+            val: "Public y = 6, k = ?",
+            cracked: false
+          },
+          {
+            math: "|ψ₂⟩ = (1/12) ∑∑ |x₁, x₂⟩ |gˣ¹ · y⁻ˣ² mod 13⟩",
+            desc: "Stage 2: The quantum oracle computes 2ˣ¹ · 6⁻ˣ² mod 13. Because y = 2⁵, constant values form diagonal ridges across the 2D lattice where x₁ - 5x₂ ≡ const (mod 12).",
+            status: "⚡ ORACLE ACTIVE: DIAGONAL PHASE RIDGES",
+            val: "x₁ - k·x₂ ≡ c (mod 12)",
+            cracked: false
+          },
+          {
+            math: "|ψ₃⟩ = ∑ |x₁, x₂⟩  such that  x₁ - 5x₂ ≡ 0 (mod 12)",
+            desc: "Stage 3: Measuring the second register collapses the 2D grid onto a single diagonal subgroup line (highlighted in gold) whose slope encodes the secret exponent k.",
+            status: "🔍 LATTICE COLLAPSE: SUBGROUP ISOLATED",
+            val: "Slope = k mod 12",
+            cracked: false
+          },
+          {
+            math: "QFT₂D(|ψ₃⟩) → Spikes along ω₁ - k·ω₂ ≡ 0 (mod 12)\nSolving ratio ω₂/ω₁ mod 12 yields Private Key k = 5",
+            desc: "Stage 4: The 2D Quantum Fourier Transform interferes all non-resonant frequencies to zero, leaving crimson spikes along the orthogonal wavevector that directly reveals k = 5!",
+            status: "🔓 DIFFIE-HELLMAN BROKEN: PRIVATE KEY FOUND",
+            val: "Secret k = 5",
+            cracked: true
+          }
+        ]
+      },
+      ecc: {
+        title: "Elliptic Curve Discrete Log (Q = d·G)",
+        stages: [
+          {
+            math: "|ψ₁⟩ = (1/14) ∑∑ |u, v⟩ |O⟩   on E(𝔽ₚ) Torus",
+            desc: "Stage 1: An elliptic curve over a finite field wraps around both axes like a 3D Torus. Quantum registers |u, v⟩ initialize in uniform superposition around the torus.",
+            status: "🔒 KEY STATUS: TORUS SUPERPOSITION",
+            val: "Q = d·G, d = ?",
+            cracked: false
+          },
+          {
+            math: "|ψ₂⟩ = ∑∑ |u, v⟩ |u·G + v·Q⟩",
+            desc: "Stage 2: Reversible quantum point-addition circuits compute u·G + v·Q in superposition. Colors show periodic phase winding around the elliptic curve group.",
+            status: "⚡ ORACLE ACTIVE: TOROIDAL WINDING",
+            val: "u + d·v (mod n)",
+            cracked: false
+          },
+          {
+            math: "|ψ₃⟩ = ∑ |u, v⟩  where  u·G + v·Q = P₀",
+            desc: "Stage 3: Measuring the curve point register collapses the torus into a helical thread of gold states winding around the torus at pitch angle determined by private scalar d = 7.",
+            status: "🔍 SUBGROUP COLLAPSE: HELICAL COSEST",
+            val: "Helix Pitch = d",
+            cracked: false
+          },
+          {
+            math: "QFT₂D(|ψ₃⟩) → Unwraps Torus to Frequency Plane\nResonance Line: ω₁·d - ω₂ ≡ 0 (mod 14) ⇒ d = 7",
+            desc: "Stage 4: Applying the 2D QFT unwraps the toroidal phase into a frequency plane. Destructive interference cancels everything except the red resonance line for d = 7!",
+            status: "🔓 ECC BROKEN: SCALAR PRIVATE KEY RECOVERED",
+            val: "Private Key d = 7",
+            cracked: true
+          }
+        ]
+      }
+    };
+
+    // --- Update Targets Based on Mode & Stage ---
+    function updateSimulationTargets() {
+      rsaGroup.visible = currentMode === 'rsa';
+      dhGroup.visible  = currentMode === 'dh';
+      eccGroup.visible = currentMode === 'ecc';
+      gridHelper.visible = currentMode !== 'ecc' || currentStage === 3;
+
+      // Update UI Readout
+      const info = READOUTS[currentMode].stages[currentStage];
+      document.getElementById('readout-title').textContent = READOUTS[currentMode].title;
+      document.getElementById('readout-math').innerText = info.math;
+      document.getElementById('readout-desc').textContent = info.desc;
+
+      const banner = document.getElementById('readout-status');
+      document.getElementById('status-label').textContent = info.status;
+      document.getElementById('status-value').textContent = info.val;
+      banner.classList.toggle('cracked', info.cracked);
+
+      // 1. Update RSA Bars
+      if (currentMode === 'rsa') {
+        rsaBars.forEach(bar => {
+          if (currentStage === 0) {
+            bar.targetHeight = 2.2;
+            bar.targetColor.setHex(0x38bdf8);
+          } else if (currentStage === 1) {
+            bar.targetHeight = 0.8 + (bar.f_x / 15) * 7.5;
+            const hue = (bar.x % 4) * 0.22 + 0.52;
+            bar.targetColor.setHSL(hue % 1, 0.85, 0.55);
+          } else if (currentStage === 2) {
+            const isCoset = (bar.x % 4 === 2); // 7^2 mod 15 = 4
+            bar.targetHeight = isCoset ? 7.5 : 0.25;
+            bar.targetColor.setHex(isCoset ? 0xfacc15 : 0x1e293b);
+          } else if (currentStage === 3) {
+            // QFT peaks at multiples of 64 / 4 = 16 (0, 16, 32, 48)
+            const isPeak = (bar.x % 16 === 0);
+            bar.targetHeight = isPeak ? 10.5 : 0.2;
+            bar.targetColor.setHex(isPeak ? 0xf43f5e : 0x1e293b);
+          }
+        });
+      }
+
+      // 2. Update Diffie-Hellman 2D Lattice
+      if (currentMode === 'dh') {
+        dhNodes.forEach(node => {
+          if (currentStage === 0) {
+            node.targetHeight = 1.8;
+            node.targetColor.setHex(0x38bdf8);
+          } else if (currentStage === 1) {
+            node.targetHeight = 0.6 + (node.val / 13) * 5.5;
+            node.targetColor.setHSL((node.exp / 12) * 0.75, 0.85, 0.55);
+          } else if (currentStage === 2) {
+            const isSubgroup = (node.exp === 0);
+            node.targetHeight = isSubgroup ? 6.5 : 0.2;
+            node.targetColor.setHex(isSubgroup ? 0xfacc15 : 0x1e293b);
+          } else if (currentStage === 3) {
+            node.targetHeight = node.isQftPeak ? 8.5 : 0.2;
+            node.targetColor.setHex(node.isQftPeak ? 0xf43f5e : 0x1e293b);
+          }
+        });
+      }
+
+      // 3. Update ECC Torus / Frequency Plane
+      if (currentMode === 'ecc') {
+        torusMesh.visible = currentStage < 3;
+        eccNodes.forEach(node => {
+          if (currentStage === 0) {
+            node.targetPos.set(node.tx, node.ty, node.tz);
+            node.targetScale = 1.0;
+            node.targetColor.setHex(0x38bdf8);
+          } else if (currentStage === 1) {
+            node.targetPos.set(node.tx, node.ty, node.tz);
+            node.targetScale = 1.15;
+            node.targetColor.setHSL(node.curveIndex / ECC_STEPS, 0.9, 0.55);
+          } else if (currentStage === 2) {
+            node.targetPos.set(node.tx, node.ty, node.tz);
+            const isHelix = node.curveIndex === 0;
+            node.targetScale = isHelix ? 1.85 : 0.35;
+            node.targetColor.setHex(isHelix ? 0xfacc15 : 0x1e293b);
+          } else if (currentStage === 3) {
+            // Unwrap Torus onto 2D QFT Frequency Grid
+            const gx = (node.u - ECC_STEPS / 2 + 0.5) * 1.25;
+            const gz = (node.v - ECC_STEPS / 2 + 0.5) * 1.25;
+            const gy = node.isQftResonance ? 3.2 : -3.5;
+            node.targetPos.set(gx, gy, gz);
+            node.targetScale = node.isQftResonance ? 1.9 : 0.4;
+            node.targetColor.setHex(node.isQftResonance ? 0xf43f5e : 0x1e293b);
+          }
+        });
+      }
+    }
+
+    // --- UI Event Listeners ---
+    document.querySelectorAll('#mode-buttons button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#mode-buttons button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentMode = btn.dataset.mode;
+        updateSimulationTargets();
+      });
+    });
+
+    document.querySelectorAll('#stage-buttons button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#stage-buttons button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentStage = parseInt(btn.dataset.stage, 10);
+        updateSimulationTargets();
+      });
+    });
+
+    // Initialize Targets
+    updateSimulationTargets();
+
+    // --- Main Animation Loop ---
+    function animate() {
+      requestAnimationFrame(animate);
+      const t = clock.getElapsedTime();
+
+      // Smooth interpolation for RSA
+      if (currentMode === 'rsa') {
+        rsaBars.forEach(bar => {
+          const wave = currentStage === 0 ? Math.sin(t * 2.5 + bar.x * 0.25) * 0.35 : 0;
+          bar.currentHeight += ((bar.targetHeight + wave) - bar.currentHeight) * 0.1;
+          bar.mesh.scale.y = Math.max(0.1, bar.currentHeight);
+          bar.mesh.material.color.lerp(bar.targetColor, 0.1);
+        });
+      }
+
+      // Smooth interpolation for Diffie-Hellman
+      if (currentMode === 'dh') {
+        dhNodes.forEach(node => {
+          const wave = currentStage === 0 ? Math.sin(t * 2 + (node.x1 + node.x2) * 0.4) * 0.3 : 0;
+          node.currentHeight += ((node.targetHeight + wave) - node.currentHeight) * 0.1;
+          node.mesh.scale.y = Math.max(0.1, node.currentHeight);
+          node.mesh.material.color.lerp(node.targetColor, 0.1);
+        });
+      }
+
+      // Smooth interpolation for ECC
+      if (currentMode === 'ecc') {
+        if (currentStage < 3) {
+          eccGroup.rotation.y = t * 0.18;
+        } else {
+          eccGroup.rotation.y += (0 - eccGroup.rotation.y) * 0.08;
+        }
+        eccNodes.forEach(node => {
+          node.mesh.position.lerp(node.targetPos, 0.08);
+          const s = node.mesh.scale.x + (node.targetScale - node.mesh.scale.x) * 0.1;
+          node.mesh.scale.set(s, s, s);
+          node.mesh.material.color.lerp(node.targetColor, 0.1);
+        });
+      }
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+    // Handle Resize
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>

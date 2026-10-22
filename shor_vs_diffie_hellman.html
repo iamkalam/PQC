@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Shor’s Algorithm vs Diffie–Hellman</title>
+    <style>
+        :root {
+            --bg: #f6f6f2;
+            --card: #fff;
+            --tx: #1b1b1f;
+            --mut: #60616a;
+            --bd: #dcdcd4;
+            --ac: #5b3fd6;
+            --al: #1d7a4d;
+            --bo: #b4531a;
+            --ev: #c0262d;
+            --hi: #ffd84d;
+            --cell: #ececE6;
+            box-sizing: border-box;
+            padding-top: env(safe-area-inset-top, 0px);
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+            color-scheme: light
+        }
+
+        @media (prefers-color-scheme:dark) {
+            :root:not([data-theme="light"]) {
+                --bg: #121216;
+                --card: #1b1b22;
+                --tx: #ececf1;
+                --mut: #a0a1ad;
+                --bd: #33333d;
+                --ac: #9a85ff;
+                --al: #4fd08c;
+                --bo: #f08c4d;
+                --ev: #ff6b72;
+                --hi: #e0b800;
+                --cell: #2a2a33;
+                color-scheme: dark
+            }
+        }
+
+        :root[data-theme="dark"] {
+            --bg: #121216;
+            --card: #1b1b22;
+            --tx: #ececf1;
+            --mut: #a0a1ad;
+            --bd: #33333d;
+            --ac: #9a85ff;
+            --al: #4fd08c;
+            --bo: #f08c4d;
+            --ev: #ff6b72;
+            --hi: #e0b800;
+            --cell: #2a2a33;
+            color-scheme: dark
+        }
+
+        html {
+            scroll-padding-top: env(safe-area-inset-top, 0px)
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--tx);
+            font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif
+        }
+
+        main {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 20px 16px 48px
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin: 0 0 4px
+        }
+
+        h2 {
+            font-size: 1.2rem;
+            margin: 0 0 8px
+        }
+
+        .sub {
+            color: var(--mut);
+            margin: 0 0 16px
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--bd);
+            border-radius: 14px;
+            padding: 18px;
+            margin-bottom: 14px
+        }
+
+        .dots {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 14px;
+            flex-wrap: wrap
+        }
+
+        .dot {
+            flex: 1;
+            min-width: 28px;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--bd);
+            cursor: pointer
+        }
+
+        .dot.on {
+            background: var(--ac)
+        }
+
+        .dot.cur {
+            background: var(--ac);
+            outline: 2px solid var(--ac);
+            outline-offset: 2px
+        }
+
+        .row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center
+        }
+
+        .who {
+            flex: 1;
+            min-width: 150px;
+            border: 1px solid var(--bd);
+            border-radius: 10px;
+            padding: 10px
+        }
+
+        .who b {
+            display: block
+        }
+
+        .al b {
+            color: var(--al)
+        }
+
+        .bo b {
+            color: var(--bo)
+        }
+
+        .ev b {
+            color: var(--ev)
+        }
+
+        code,
+        .m {
+            font-family: ui-monospace, Menlo, Consolas, monospace;
+            background: var(--cell);
+            padding: 1px 6px;
+            border-radius: 5px;
+            font-size: .92em
+        }
+
+        .eq {
+            font-family: ui-monospace, Menlo, Consolas, monospace;
+            background: var(--cell);
+            padding: 10px 12px;
+            border-radius: 8px;
+            margin: 8px 0;
+            overflow-x: auto;
+            white-space: pre
+        }
+
+        button {
+            font: inherit;
+            border: 1px solid var(--ac);
+            background: var(--ac);
+            color: #fff;
+            border-radius: 9px;
+            padding: 8px 16px;
+            cursor: pointer
+        }
+
+        button.sec {
+            background: transparent;
+            color: var(--ac)
+        }
+
+        button:disabled {
+            opacity: .4;
+            cursor: not-allowed
+        }
+
+        input {
+            font: inherit;
+            width: 70px;
+            padding: 5px;
+            border-radius: 7px;
+            border: 1px solid var(--bd);
+            background: var(--bg);
+            color: var(--tx)
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(22, 1fr);
+            gap: 1px;
+            max-width: 462px;
+            width: 100%;
+            margin: 10px auto;
+            background: var(--bd);
+            border: 1px solid var(--bd)
+        }
+
+        .grid i {
+            aspect-ratio: 1;
+            background: var(--cell);
+            display: block
+        }
+
+        .ax {
+            text-align: center;
+            color: var(--mut);
+            font-size: .8rem
+        }
+
+        .note {
+            border-left: 4px solid var(--ac);
+            padding: 6px 12px;
+            color: var(--mut);
+            margin: 10px 0
+        }
+
+        .ok {
+            color: var(--al);
+            font-weight: 600
+        }
+
+        .bad {
+            color: var(--ev);
+            font-weight: 600
+        }
+
+        .nav {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 6px
+        }
+
+        ul.log {
+            padding-left: 18px;
+            margin: 8px 0
+        }
+
+        .scroll {
+            overflow-x: auto
+        }
+    </style>
+</head>
+
+<body>
+    <main>
+        <h1>Shor’s algorithm vs Diffie–Hellman</h1>
+        <p class="sub">A toy simulation (p = 23) of how a quantum computer recovers a private key from public values.
+            The quantum steps are emulated classically, so everything you see is what the ideal quantum state would look
+            like.</p>
+        <div class="dots" id="dots"></div>
+        <div class="card" id="panel"></div>
+        <div class="nav"><button class="sec" id="prev">← Back</button><button id="next">Next →</button></div>
+    </main>
+    <script>
+        const p = 23, g = 5, N = 22; // N = p-1 = order of g (g=5 is a primitive root mod 23)
+        let a = 6, b = 15, step = 0, v = 1, meas = [], solved = null;
+        const pw = (x, e, m) => { let r = 1; x %= m; while (e > 0) { if (e & 1) r = r * x % m; x = x * x % m; e >>= 1 } return r };
+        const gcd = (x, y) => y ? gcd(y, x % y) : x;
+        const inv = (x) => { for (let i = 1; i < N; i++)if (x * i % N === 1) return i; return null };
+        const A = () => pw(g, a, p), B = () => pw(g, b, p), Ainv = () => pw(A(), p - 2, p);
+        const f = (x, y) => pw(g, x, p) * pw(Ainv(), y, p) % p;
+        const pickV = () => { v = f(Math.floor(Math.random() * N), Math.floor(Math.random() * N)) };
+        pickV();
+        const names = ["Diffie–Hellman", "Eve’s problem", "A hidden function", "Superposition", "Measure register 2", "Quantum Fourier transform", "Measure & collapse", "Recover the key", "Secret stolen"];
+        function grid(fn) { let h = '<div class="grid">'; for (let y = N - 1; y >= 0; y--)for (let x = 0; x < N; x++) { const c = fn(x, y); h += `<i style="${c || ''}"></i>` } return h + '</div>' }
+        const col = (x, y) => `background:hsl(${f(x, y) * 15} 65% 55%)`;
+        const HI = 'background:var(--hi)';
+        function reset() { meas = []; solved = null; pickV() }
+        const S = [
+            () => `<h2>1 · Alice and Bob agree on a secret</h2>
+<p>Public values: prime <code>p = ${p}</code> and generator <code>g = ${g}</code>. Each picks a private number, then publishes <code>g<sup>private</sup> mod p</code>.</p>
+<div class="row">
+<div class="who al"><b>Alice</b>private a = <input type="number" id="ia" min="2" max="21" value="${a}"><br>A = ${g}<sup>${a}</sup> mod ${p} = <code>${A()}</code></div>
+<div class="who bo"><b>Bob</b>private b = <input type="number" id="ib" min="2" max="21" value="${b}"><br>B = ${g}<sup>${b}</sup> mod ${p} = <code>${B()}</code></div>
+<div class="who ev"><b>Eve (eavesdropper)</b>sees only p, g, A, B<br>= ${p}, ${g}, <code>${A()}</code>, <code>${B()}</code></div></div>
+<div class="eq">Alice: s = B^a mod p = ${B()}^${a} mod ${p} = ${pw(B(), a, p)}
+Bob  : s = A^b mod p = ${A()}^${b} mod ${p} = ${pw(A(), b, p)}</div>
+<p>Both get the same shared secret <code>s = ${pw(B(), a, p)}</code>. Its safety rests on one assumption: given <code>A</code>, nobody can find <code>a</code>. That is the <b>discrete logarithm problem</b>. Try changing a and b.</p>`,
+            () => {
+                let t = [], x = 1; for (let k = 0; k < N; k++) { if (k <= a) t.push(`${g}<sup>${k}</sup>=${x}`); x = x * g % p }
+                return `<h2>2 · Eve’s problem: find a with g<sup>a</sup> ≡ A</h2>
+<p>Eve needs <code>a</code> such that <code>${g}<sup>a</sup> mod ${p} = ${A()}</code>. Classically she can only guess and check:</p>
+<div class="eq scroll">${t.join('  ')}   ← match at a = ${a}</div>
+<p>That took ${a} tries here. For a real 2048-bit prime, the best classical algorithms need far more work than any computer can do. <b>Shor’s algorithm</b> instead finds <code>a</code> in polynomial time, by turning the problem into <em>finding a hidden periodic pattern</em>.</p>
+<div class="note">Here the group size is <code>N = p − 1 = ${N}</code>, so exponents live modulo ${N}. Shor’s algorithm needs only <code>g</code>, <code>A</code>, <code>p</code>, all public.</div>`
+            },
+            () => `<h2>3 · Build a function with a hidden pattern</h2>
+<p>Eve defines a two-input function using only public data:</p>
+<div class="eq">f(x, y) = g^x · A^(−y) mod p</div>
+<p>Because <code>A = g<sup>a</sup></code>, this equals <code>g<sup>x − a·y</sup></code>. So <code>f(x,y) = 1</code> exactly when <code>x ≡ a·y (mod ${N})</code>. That secret relation is a lattice, and it hides <code>a</code>. The grid colors every <code>(x, y)</code> by its value of f. Cells with the same color share a value, and f = 1 cells are outlined in yellow.</p>
+${grid((x, y) => f(x, y) === 1 ? HI : col(x, y))}
+<div class="ax">x → (0…21), y ↑ (0…21). Same-colored cells form parallel diagonal lines.</div>
+<p>Look: every color repeats along evenly spaced lines. Finding the slope of those lines reveals <code>a</code>. A classical computer would have to sample many cells to see it; a quantum computer sees all cells at once.</p>`,
+            () => `<h2>4 · Quantum superposition over all inputs</h2>
+<p>The quantum computer prepares two registers. Register 1 holds <code>(x, y)</code> in an equal superposition of all ${N * N} pairs, each with amplitude 1/${N}. It then computes <code>f(x,y)</code> into register 2 in one step, for every pair simultaneously.</p>
+<div class="eq">|ψ⟩ = (1/${N}) Σ over x,y  |x, y⟩ |f(x,y)⟩</div>
+${grid((x, y) => col(x, y))}
+<div class="ax">All ${N * N} cells are “active” at the same time.</div>
+<div class="note">Modular exponentiation is done with a reversible quantum circuit (repeated squaring). This is the most expensive part on real hardware.</div>`,
+            () => `<h2>5 · Measure register 2</h2>
+<p>Measuring the output register gives one random value, here <code>f = ${v}</code>. Because the registers are entangled, register 1 collapses to <em>only the inputs that produce ${v}</em>. Those cells are highlighted:</p>
+${grid((x, y) => f(x, y) === v ? HI : 'background:var(--cell);opacity:.55')}
+<div class="ax">${N} surviving points, evenly spaced along a line of slope-related spacing.</div>
+<p>The surviving points form a shifted copy of the hidden lattice. Their <em>pattern</em> is periodic, but the random shift hides the period if we measured register 1 directly. So we need a trick that cancels the shift.</p>
+<button class="sec" id="rv">Pick another random value</button>`,
+            () => `<h2>6 · Quantum Fourier transform (QFT)</h2>
+<p>The QFT converts a periodic pattern into sharp peaks in the frequency domain, and the random shift only changes the phases, not the peak locations. Interference cancels everything except frequencies <code>(c, d)</code> where:</p>
+<div class="eq">d ≡ −a · c   (mod ${N})</div>
+<p>Only ${N} of the ${N * N} possible outcomes have non-zero probability. Each lit cell below is a possible measurement result, equally likely (1/${N}):</p>
+${grid((c, d) => d === ((N - a * c % N) % N) ? 'background:var(--ac)' : '')}
+<div class="ax">c → (0…21), d ↑ (0…21). The bright line has slope −a (mod ${N}), the secret is encoded in its slope.</div>`,
+            () => {
+                const lastOk = solved !== null;
+                return `<h2>7 · Measure register 1</h2>
+<p>Measuring picks one lit cell <code>(c, d)</code> at random. Each result gives a linear equation <code>d ≡ −a·c</code>. We can solve for <code>a</code> only if <code>c</code> has an inverse mod ${N}, i.e. <code>gcd(c, ${N}) = 1</code>. Otherwise we just run the quantum circuit again.</p>
+${grid((c, d) => meas.some(m => m.c === c && m.d === d) ? HI : (d === ((N - a * c % N) % N) ? 'background:var(--ac);opacity:.4' : ''))}
+<button id="ms" ${lastOk ? 'disabled' : ''}>⚛ Run &amp; measure</button> <button class="sec" id="rs">Reset runs</button>
+<ul class="log">${meas.map((m, i) => `<li>Run ${i + 1}: (c, d) = (${m.c}, ${m.d}), gcd(${m.c}, ${N}) = ${m.gc} → ${m.gc === 1 ? '<span class="ok">usable ✓</span>' : '<span class="bad">no inverse, retry ✗</span>'}</li>`).join('') || '<li>No measurements yet. Press the button.</li>'}</ul>
+${lastOk ? '<p class="ok">A usable result! Continue to the next step.</p>' : ''}`
+            },
+            () => {
+                if (!solved) return '<p>Measure first.</p>'; const { c, d } = solved, ci = inv(c), ar = (N - d * ci % N) % N;
+                return `<h2>8 · Classical post-processing: recover a</h2>
+<p>Using the usable result <code>(c, d) = (${c}, ${d})</code>:</p>
+<div class="eq">d ≡ −a·c (mod ${N})
+a ≡ −d · c⁻¹ (mod ${N})
+c⁻¹ = ${ci}   (since ${c}·${ci} mod ${N} = ${c * ci % N})
+a ≡ −${d} · ${ci} mod ${N} = <b>${ar}</b></div>
+<p>Verify with public data only:</p>
+<div class="eq">g^a mod p = ${g}^${ar} mod ${p} = ${pw(g, ar, p)}  ${pw(g, ar, p) === A() ? '= A ✓' : '≠ A ✗'}</div>
+<p class="ok">Eve has recovered Alice’s private key a = ${ar}.</p>`
+            },
+            () => {
+                const s = pw(B(), a, p);
+                return `<h2>9 · Eve computes the shared secret</h2>
+<div class="row"><div class="who al"><b>Alice’s secret</b>B^a mod p = <code>${s}</code></div>
+<div class="who bo"><b>Bob’s secret</b>A^b mod p = <code>${pw(A(), b, p)}</code></div>
+<div class="who ev"><b>Eve’s secret</b>B^a mod p = ${B()}^${a} mod ${p} = <code>${s}</code></div></div>
+<p class="bad">Eve now holds the same key as Alice and Bob and can decrypt all traffic encrypted with it, without ever being detected.</p>
+<div class="note"><b>Reality check:</b> this toy uses p = 23 and a perfect, noise-free quantum computer. Breaking a real 2048-bit DH group needs thousands of error-corrected logical qubits, which does not exist yet. That is why the world is migrating to post-quantum key exchange (e.g. ML-KEM) now, since traffic recorded today could be decrypted later.</div>
+<button class="sec" id="again">↺ Start over</button>`}
+        ];
+        function render() {
+            document.getElementById('dots').innerHTML = names.map((n, i) => `<div class="dot ${i < step ? 'on' : ''} ${i === step ? 'cur' : ''}" title="${n}" data-i="${i}"></div>`).join('');
+            document.getElementById('panel').innerHTML = S[step]();
+            document.getElementById('prev').disabled = step === 0;
+            document.getElementById('next').disabled = step === S.length - 1 || (step === 6 && !solved);
+            const $ = id => document.getElementById(id);
+            if ($('ia')) $('ia').onchange = e => { a = Math.min(21, Math.max(2, +e.target.value || 2)); reset(); render() };
+            if ($('ib')) $('ib').onchange = e => { b = Math.min(21, Math.max(2, +e.target.value || 2)); render() };
+            if ($('rv')) $('rv').onclick = () => { pickV(); render() };
+            if ($('ms')) $('ms').onclick = () => { const k = Math.floor(Math.random() * N), c = k, d = (N - a * k % N) % N, gc = gcd(c, N); const m = { c, d, gc }; meas.push(m); if (gc === 1) solved = m; render() };
+            if ($('rs')) $('rs').onclick = () => { meas = []; solved = null; render() };
+            if ($('again')) $('again').onclick = () => { reset(); step = 0; render() };
+            document.querySelectorAll('.dot').forEach(d => d.onclick = () => { const i = +d.dataset.i; if (i <= 6 || solved) { step = i; render() } });
+        }
+        document.getElementById('prev').onclick = () => { step--; render() };
+        document.getElementById('next').onclick = () => { step++; render() };
+        render();
+    </script>
+</body>
+
+</html>
